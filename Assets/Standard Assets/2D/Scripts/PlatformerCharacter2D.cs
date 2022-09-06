@@ -17,11 +17,15 @@ namespace UnityStandardAssets._2D
         private Transform m_GroundCheck;    // A position marking where to check if the player is grounded.
         const float k_GroundedRadius = .2f; // Radius of the overlap circle to determine if grounded
         private bool m_Grounded;            // Whether or not the player is grounded.
+        private bool m_AgainstWall;            // Whether or not the player is against wall.
         private Transform m_CeilingCheck;   // A position marking where to check for ceilings
         const float k_CeilingRadius = .01f; // Radius of the overlap circle to determine if the player can stand up
         private Animator m_Anim;            // Reference to the player's animator component.
         private Rigidbody2D m_Rigidbody2D;
         private bool m_FacingRight = true;  // For determining which way the player is currently facing.
+        private float m_WallTimer = 0f;
+
+        private int direction => m_FacingRight ? 1 : -1;
 
         private void Awake()
         {
@@ -36,6 +40,7 @@ namespace UnityStandardAssets._2D
         private void FixedUpdate()
         {
             m_Grounded = false;
+            m_AgainstWall = false;
 
             // The player is grounded if a circlecast to the groundcheck position hits anything designated as ground
             // This can be done using layers instead but Sample Assets will not overwrite your project settings.
@@ -49,6 +54,12 @@ namespace UnityStandardAssets._2D
 
             // Set the vertical animation
             m_Anim.SetFloat("vSpeed", m_Rigidbody2D.velocity.y);
+
+            RaycastHit2D[] hitWall = Physics2D.RaycastAll(transform.position, new Vector2(direction, 0), 1f);
+            if(hitWall.Length != 1) 
+            {
+                m_AgainstWall = true;
+            }
         }
 
 
@@ -77,28 +88,47 @@ namespace UnityStandardAssets._2D
                 m_Anim.SetFloat("Speed", Mathf.Abs(move));
 
                 // Move the character
-                m_Rigidbody2D.velocity = new Vector2(move*m_MaxSpeed, m_Rigidbody2D.velocity.y);
+                if(m_WallTimer > 0) 
+                {
+                    m_WallTimer -= Time.fixedDeltaTime;
+                }
+                else 
+                {
+                    m_Rigidbody2D.velocity = new Vector2(move*m_MaxSpeed, m_Rigidbody2D.velocity.y);
 
-                // If the input is moving the player right and the player is facing left...
-                if (move > 0 && !m_FacingRight)
-                {
-                    // ... flip the player.
-                    Flip();
+                     // If the input is moving the player right and the player is facing left...
+                    if (move > 0 && !m_FacingRight)
+                    {
+                        // ... flip the player.
+                        Flip();
+                    }
+                        // Otherwise if the input is moving the player left and the player is facing right...
+                    else if (move < 0 && m_FacingRight)
+                    {
+                        // ... flip the player.
+                        Flip();
+                    }
                 }
-                    // Otherwise if the input is moving the player left and the player is facing right...
-                else if (move < 0 && m_FacingRight)
-                {
-                    // ... flip the player.
-                    Flip();
-                }
+
             }
             // If the player should jump...
-            if (jump && ++m_JumpCount < k_MaxJumps)
+            if (jump)
             {
-                // Add a vertical force to the player.
-                m_Grounded = false;
-                m_Anim.SetBool("Ground", false);
-                m_Rigidbody2D.AddForce(new Vector2(0f, m_JumpForce));
+                if(!m_Grounded && m_AgainstWall)
+                {
+                    m_WallTimer = 0.7f;
+                    Flip();
+                    Debug.Log(m_JumpForce * direction * -1);
+                    m_Rigidbody2D.AddForce(new Vector2(m_JumpForce * direction, m_JumpForce));
+                }
+                else if(++m_JumpCount < k_MaxJumps)
+                {
+                    // Add a vertical force to the player.
+                    m_Grounded = false;
+                    m_Anim.SetBool("Ground", false);
+                    m_Rigidbody2D.AddForce(new Vector2(0f, m_JumpForce));
+                }
+
             }
 
             if(m_Grounded) 
