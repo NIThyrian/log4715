@@ -8,7 +8,7 @@ namespace UnityStandardAssets._2D
     {
         [SerializeField] private float m_MaxSpeed = 10f;                    // The fastest the player can travel in the x axis.
         [SerializeField] private float m_JumpForce = 400f;                  // Amount of force added when the player jumps.
-        [SerializeField] private const uint k_MaxJumps = 3;                    
+        [SerializeField] private uint m_MaxJumps = 3; //TODO: saut infini (gérer ce edge case)                    
         [Range(0, 1)] [SerializeField] private float m_CrouchSpeed = .36f;  // Amount of maxSpeed applied to crouching movement. 1 = 100%
         [SerializeField] private bool m_AirControl = false;                 // Whether or not a player can steer while jumping;
         [SerializeField] private LayerMask m_WhatIsGround;                  // A mask determining what is ground to the character
@@ -114,26 +114,28 @@ namespace UnityStandardAssets._2D
             // If the player should jump...
             if (jump)
             {
-                if(!m_Grounded && m_AgainstWall)
+                if (!m_Grounded && m_AgainstWall)
                 {
                     m_WallTimer = 0.7f;
                     Flip();
                     Debug.Log(m_JumpForce * direction * -1);
                     m_Rigidbody2D.AddForce(new Vector2(m_JumpForce * direction, m_JumpForce));
                 }
-                else if(++m_JumpCount < k_MaxJumps)
+                else
                 {
-                    // Add a vertical force to the player.
-                    m_Grounded = false;
-                    m_Anim.SetBool("Ground", false);
-                    m_Rigidbody2D.AddForce(new Vector2(0f, m_JumpForce));
+                    if (m_Grounded)
+                    {
+                        m_JumpCount = 0;
+                        m_Grounded = false;
+                        m_Anim.SetBool("Ground", false);
+                    }
+
+                    if(m_JumpCount++ <= m_MaxJumps)
+                    {
+                        // Add a vertical force to the player.
+                        m_Rigidbody2D.AddForce(new Vector2(0f, m_JumpForce));
+                    }
                 }
-
-            }
-
-            if(m_Grounded) 
-            {
-                m_JumpCount = 0;
             }
         }
 
