@@ -21,6 +21,8 @@ namespace UnityStandardAssets._2D
         private Transform m_GroundCheck;    // A position marking where to check if the player is grounded.
         const float k_GroundedRadius = .2f; // Radius of the overlap circle to determine if grounded
         private bool m_Grounded;            // Whether or not the player is grounded.
+        private Transform m_WallCheck;    // A position marking where to check if the player is against a wall.
+        const float k_WallCheckRadius = .05f; // Radius of the overlap circle to determine if against a wall.
         private bool m_AgainstWall;            // Whether or not the player is against wall.
         private Transform m_CeilingCheck;   // A position marking where to check for ceilings
         const float k_CeilingRadius = .01f; // Radius of the overlap circle to determine if the player can stand up
@@ -39,6 +41,7 @@ namespace UnityStandardAssets._2D
             // Setting up references.
             m_GroundCheck = transform.Find("GroundCheck");
             m_CeilingCheck = transform.Find("CeilingCheck");
+            m_WallCheck = transform.Find("WallCheck");
             m_Anim = GetComponent<Animator>();
             m_Rigidbody2D = GetComponent<Rigidbody2D>();
         }
@@ -62,10 +65,11 @@ namespace UnityStandardAssets._2D
             // Set the vertical animation
             m_Anim.SetFloat("vSpeed", m_Rigidbody2D.velocity.y);
 
-            RaycastHit2D[] hitWall = Physics2D.RaycastAll(transform.position, new Vector2(Direction, 0), 1f);
-            if (hitWall.Length != 1)
+            Collider2D[] wallCollider = Physics2D.OverlapCircleAll(m_WallCheck.position, k_WallCheckRadius, m_WhatIsGround);
+            for (int i = 0; i < wallCollider.Length; i++)
             {
-                m_AgainstWall = true;
+                if (wallCollider[i].gameObject != gameObject)
+                    m_AgainstWall = true;
             }
 
             m_ChargeTimer -= Time.fixedDeltaTime;
@@ -144,7 +148,6 @@ namespace UnityStandardAssets._2D
                 {
                     m_WallTimer = 0.7f;
                     Flip();
-                    Debug.Log(m_JumpForce * Direction * -1);
                     m_Rigidbody2D.AddForce(new Vector2(m_JumpForce * Direction, m_JumpForce));
                     Debug.Log("Jumping on wall");
                 }
@@ -162,14 +165,9 @@ namespace UnityStandardAssets._2D
                         // Add a vertical force to the player.
                         Jump(m_JumpForce);
 
-                        if (m_JumpCount-1 == 0)
-                        {
-                            Debug.Log("Jumping from ground");
-                        }
-                        else
-                        {
-                            Debug.Log($"Jumping in air {m_JumpCount-1}");
-                        }
+                        Debug.Log(m_JumpCount <= 1 ? "Jumping from ground": $"Jumping in air {m_JumpCount - 1}");
+                        
+  
                     }
                 }
 
