@@ -9,14 +9,15 @@ namespace UnityStandardAssets._2D
         [SerializeField] private float m_MaxSpeed = 10f;                    // The fastest the player can travel in the x axis.
         [SerializeField] private float m_JumpForce = 400f;                  // Amount of force added when the player jumps.
         [SerializeField] private float m_MaxChargedJumpForce = 400f;           // If the m_MaxChargedJumpForce is set to 0, then max jump force will be m_JumpForce
-        [SerializeField] private uint m_MaxJumps = 3; //TODO: saut infini (g�rer ce edge case)                    
+        [SerializeField] private uint m_MaxJumps = 3;                       // Max jumps               
         [Range(0, 1)][SerializeField] private float m_CrouchSpeed = .36f;  // Amount of maxSpeed applied to crouching movement. 1 = 100%
         [SerializeField] private bool m_AirControl = false;                 // Whether or not a player can steer while jumping;
         [SerializeField] private LayerMask m_WhatIsGround;                  // A mask determining what is ground to the character
 
-        private uint m_JumpCount = 0;
-        private float m_AccumulatedChargedJumpForce = 0f;
-        private readonly float m_ChargedJumpForceIncrement = 5f;
+        private uint m_JumpCount = 0; // The current number of in air jumps
+        private float m_AccumulatedChargedJumpForce = 0f; // The added force added to a charged jump
+        private float m_ChargedJumpForceIncrement; // The increment of the accumulated jump force per FixedUpdate
+        private const float k_DelayBeforeMaxAccumulatedChargedJumpForce = 3f; // The amount of time before m_AccumulatedChargedJumpForce is maxed
 
         private Transform m_GroundCheck;    // A position marking where to check if the player is grounded.
         const float k_GroundedRadius = .2f; // Radius of the overlap circle to determine if grounded
@@ -26,7 +27,7 @@ namespace UnityStandardAssets._2D
         private Transform m_WallCheck;    // A position marking where to check if the player is against a wall.
         const float k_WallCheckRadius = .05f; // Radius of the overlap circle to determine if against a wall.
         private bool m_AgainstWall;            // Whether or not the player is against wall.
-        private float m_WallTimer = 0f;
+        private float m_WallTimer = 0f;    // A timer to recheck if player hits wall
 
         private Transform m_CeilingCheck;   // A position marking where to check for ceilings
         const float k_CeilingRadius = .01f; // Radius of the overlap circle to determine if the player can stand up
@@ -34,9 +35,6 @@ namespace UnityStandardAssets._2D
         private Animator m_Anim;            // Reference to the player's animator component.
         private Rigidbody2D m_Rigidbody2D;
         private bool m_FacingRight = true;  // For determining which way the player is currently facing.
-
-        private const float k_ChargeTimerDefaultTime = 0.02f;
-        private float m_ChargeTimer = k_ChargeTimerDefaultTime;
 
         private int Direction => m_FacingRight ? 1 : -1;
 
@@ -48,6 +46,9 @@ namespace UnityStandardAssets._2D
             m_WallCheck = transform.Find("WallCheck");
             m_Anim = GetComponent<Animator>();
             m_Rigidbody2D = GetComponent<Rigidbody2D>();
+
+            // Cross product to calculate the increment amount to accumulate a max amount of charge with every Time.fixedDeltaTime seconds
+            m_ChargedJumpForceIncrement = Time.fixedDeltaTime * m_MaxChargedJumpForce / k_DelayBeforeMaxAccumulatedChargedJumpForce;
         }
 
 
@@ -75,9 +76,6 @@ namespace UnityStandardAssets._2D
                 if (wallCollider[i].gameObject != gameObject)
                     m_AgainstWall = true;
             }
-
-            m_ChargeTimer -= Time.fixedDeltaTime;
-
         }
 
 
@@ -129,22 +127,21 @@ namespace UnityStandardAssets._2D
                 }
 
             }
+
             if (charging)
             {
-                if (Grounded && m_ChargeTimer < 0)
+                if (Grounded)
                 {
-                    m_ChargeTimer = k_ChargeTimerDefaultTime;
+                    // Increment m_AccumulatedChargedJumpForce until m_MaxChargedJumpForce
                     m_AccumulatedChargedJumpForce = Math.Min(m_MaxChargedJumpForce, m_AccumulatedChargedJumpForce + m_ChargedJumpForceIncrement);
-                    Debug.Log("charging");
                 }
             }
+            // If the player is not charging anymore and has accumulated some jump charge
             else if (Grounded && m_AccumulatedChargedJumpForce > 0)
             {
                 Jump(m_JumpForce + m_AccumulatedChargedJumpForce);
                 m_AccumulatedChargedJumpForce = 0;
-                Debug.Log("Releasing charge");
             }
-            // If the player should jump or has accumulated some jump charge
             else if (jump)
             {
 
@@ -153,7 +150,6 @@ namespace UnityStandardAssets._2D
                     m_WallTimer = 0.7f;
                     Flip();
                     m_Rigidbody2D.AddForce(new Vector2(m_JumpForce * Direction, m_JumpForce));
-                    Debug.Log("Jumping on wall");
                 }
                 else
                 {
@@ -164,14 +160,11 @@ namespace UnityStandardAssets._2D
                         m_Anim.SetBool("Ground", false);
                     }
 
-                    if (m_JumpCount++ <= m_MaxJumps)
+                    // Handles infinity
+                    if (m_MaxJumps == uint.MaxValue || m_JumpCount++ <= m_MaxJumps)
                     {
                         // Add a vertical force to the player.
                         Jump(m_JumpForce);
-
-                        Debug.Log(m_JumpCount <= 1 ? "Jumping from ground": $"Jumping in air {m_JumpCount - 1}");
-                        
-  
                     }
                 }
 
