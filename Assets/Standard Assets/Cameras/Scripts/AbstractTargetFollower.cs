@@ -1,5 +1,6 @@
 using System;
 using UnityEngine;
+using UnityStandardAssets._2D;
 
 #pragma warning disable 649
 namespace UnityStandardAssets.Cameras
@@ -18,6 +19,7 @@ namespace UnityStandardAssets.Cameras
         [SerializeField] private UpdateType m_UpdateType;         // stores the selected update type
 
         protected Rigidbody targetRigidbody;
+        protected PlatformerCharacter2D character;
 
 
         protected virtual void Start()
@@ -30,6 +32,7 @@ namespace UnityStandardAssets.Cameras
             }
             if (m_Target == null) return;
             targetRigidbody = m_Target.GetComponent<Rigidbody>();
+            SetCharacter();
         }
 
 
@@ -44,6 +47,10 @@ namespace UnityStandardAssets.Cameras
             if (m_UpdateType == UpdateType.FixedUpdate)
             {
                 FollowTarget(Time.deltaTime);
+            }
+            if (!character)
+            {
+                SetCharacter();
             }
         }
 
@@ -79,6 +86,10 @@ namespace UnityStandardAssets.Cameras
 
         protected abstract void FollowTarget(float deltaTime);
 
+        private void SetCharacter()
+        {
+            character = m_Target.GetComponent<PlatformerCharacter2D>();
+        }
 
         public void FindAndTargetPlayer()
         {

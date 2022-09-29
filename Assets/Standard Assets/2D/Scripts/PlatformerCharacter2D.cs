@@ -20,16 +20,20 @@ namespace UnityStandardAssets._2D
 
         private Transform m_GroundCheck;    // A position marking where to check if the player is grounded.
         const float k_GroundedRadius = .2f; // Radius of the overlap circle to determine if grounded
-        private bool m_Grounded;            // Whether or not the player is grounded.
+
+        public bool Grounded { get; private set; }
+
         private Transform m_WallCheck;    // A position marking where to check if the player is against a wall.
         const float k_WallCheckRadius = .05f; // Radius of the overlap circle to determine if against a wall.
         private bool m_AgainstWall;            // Whether or not the player is against wall.
+        private float m_WallTimer = 0f;
+
         private Transform m_CeilingCheck;   // A position marking where to check for ceilings
         const float k_CeilingRadius = .01f; // Radius of the overlap circle to determine if the player can stand up
+
         private Animator m_Anim;            // Reference to the player's animator component.
         private Rigidbody2D m_Rigidbody2D;
         private bool m_FacingRight = true;  // For determining which way the player is currently facing.
-        private float m_WallTimer = 0f;
 
         private const float k_ChargeTimerDefaultTime = 0.02f;
         private float m_ChargeTimer = k_ChargeTimerDefaultTime;
@@ -49,7 +53,7 @@ namespace UnityStandardAssets._2D
 
         private void FixedUpdate()
         {
-            m_Grounded = false;
+            Grounded = false;
             m_AgainstWall = false;
 
             // The player is grounded if a circlecast to the groundcheck position hits anything designated as ground
@@ -58,9 +62,9 @@ namespace UnityStandardAssets._2D
             for (int i = 0; i < colliders.Length; i++)
             {
                 if (colliders[i].gameObject != gameObject)
-                    m_Grounded = true;
+                    Grounded = true;
             }
-            m_Anim.SetBool("Ground", m_Grounded);
+            m_Anim.SetBool("Ground", Grounded);
 
             // Set the vertical animation
             m_Anim.SetFloat("vSpeed", m_Rigidbody2D.velocity.y);
@@ -93,7 +97,7 @@ namespace UnityStandardAssets._2D
             m_Anim.SetBool("Crouch", crouch);
 
             //only control the player if grounded or airControl is turned on
-            if (m_Grounded || m_AirControl)
+            if (Grounded || m_AirControl)
             {
                 // Reduce the speed if crouching by the crouchSpeed multiplier
                 move = (crouch ? move * m_CrouchSpeed : move);
@@ -127,14 +131,14 @@ namespace UnityStandardAssets._2D
             }
             if (charging)
             {
-                if (m_Grounded && m_ChargeTimer < 0)
+                if (Grounded && m_ChargeTimer < 0)
                 {
                     m_ChargeTimer = k_ChargeTimerDefaultTime;
                     m_AccumulatedChargedJumpForce = Math.Min(m_MaxChargedJumpForce, m_AccumulatedChargedJumpForce + m_ChargedJumpForceIncrement);
                     Debug.Log("charging");
                 }
             }
-            else if (m_Grounded && m_AccumulatedChargedJumpForce > 0)
+            else if (Grounded && m_AccumulatedChargedJumpForce > 0)
             {
                 Jump(m_JumpForce + m_AccumulatedChargedJumpForce);
                 m_AccumulatedChargedJumpForce = 0;
@@ -144,7 +148,7 @@ namespace UnityStandardAssets._2D
             else if (jump)
             {
 
-                if (!m_Grounded && m_AgainstWall)
+                if (!Grounded && m_AgainstWall)
                 {
                     m_WallTimer = 0.7f;
                     Flip();
@@ -153,10 +157,10 @@ namespace UnityStandardAssets._2D
                 }
                 else
                 {
-                    if (m_Grounded)
+                    if (Grounded)
                     {
                         m_JumpCount = 0;
-                        m_Grounded = false;
+                        Grounded = false;
                         m_Anim.SetBool("Ground", false);
                     }
 
