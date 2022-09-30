@@ -8,7 +8,7 @@ namespace UnityStandardAssets._2D
     {
         [SerializeField] private float m_MaxSpeed = 10f;                    // The fastest the player can travel in the x axis.
         [SerializeField] private float m_JumpForce = 400f;                  // Amount of force added when the player jumps.
-        [SerializeField] private float m_MaxChargedJumpForce = 400f;           // If the m_MaxChargedJumpForce is set to 0, then max jump force will be m_JumpForce
+        [SerializeField] private uint m_MaxChargedJumpForce = 400;           // If the m_MaxChargedJumpForce is set to 0, then max jump force will be m_JumpForce
         [SerializeField] private uint m_MaxJumps = 3;                       // Max jumps               
         [Range(0, 1)][SerializeField] private float m_CrouchSpeed = .36f;  // Amount of maxSpeed applied to crouching movement. 1 = 100%
         [SerializeField] private bool m_AirControl = false;                 // Whether or not a player can steer while jumping;
@@ -133,7 +133,7 @@ namespace UnityStandardAssets._2D
                 if (Grounded)
                 {
                     // Increment m_AccumulatedChargedJumpForce until m_MaxChargedJumpForce
-                    m_AccumulatedChargedJumpForce = Math.Min(m_MaxChargedJumpForce, m_AccumulatedChargedJumpForce + m_ChargedJumpForceIncrement);
+                    m_AccumulatedChargedJumpForce = Math.Min(m_MaxChargedJumpForce + 0.01f, m_AccumulatedChargedJumpForce + m_ChargedJumpForceIncrement);
                 }
             }
             // If the player is not charging anymore and has accumulated some jump charge
